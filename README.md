@@ -2,6 +2,10 @@
 
 SCMamba-YOLO is a practical training and evaluation codebase for object detection built on Ultralytics and selective scan operators. It is mainly designed for submarine cable detection in complex underwater scenes, and can also be adapted to other custom detection tasks with the same training pipeline. This repository supports training, validation, testing, resume training, warm-start loading, and optional layer freezing through a single entry script. In typical use, you prepare a dataset yaml file, select a model configuration from `ultralytics/cfg/models/scmamba-yolo/`, train with `train.py`, and export paper-style evaluation statistics with `val.py`.
 
+## Architecture Figure
+
+[Open the network architecture figure (PDF)](./Figure.pdf)
+
 ## Repository Structure
 
 ```text
