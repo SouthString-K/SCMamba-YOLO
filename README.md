@@ -4,6 +4,8 @@ SCMamba-YOLO is a practical training and evaluation codebase for object detectio
 
 ## Architecture Figure
 
+![SCMamba-YOLO Architecture](./Figure.png)
+
 [Open the network architecture figure (PDF)](./Figure.pdf)
 
 ## Repository Structure
