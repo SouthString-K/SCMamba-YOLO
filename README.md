@@ -1,65 +1,30 @@
 # SCMamba-YOLO
+[IcaMal2026]
 
-SCMamba-YOLO is a practical training and evaluation codebase for object detection built on Ultralytics and selective scan operators. It is mainly designed for submarine cable detection in complex underwater scenes, and can also be adapted to other custom detection tasks with the same training pipeline. This repository supports training, validation, testing, resume training, warm-start loading, and optional layer freezing through a single entry script. In typical use, you prepare a dataset yaml file, select a model configuration from `ultralytics/cfg/models/scmamba-yolo/`, train with `train.py`, and export paper-style evaluation statistics with `val.py`.
-
-## Architecture Figure
-
-![SCMamba-YOLO Architecture](./Figure.png)
-
-[Open the network architecture figure (PDF)](./Figure.pdf)
-
-## Repository Structure
-
-```text
-.
-├── train.py
-├── selective_scan/
-├── ultralytics/
-│   ├── cfg/
-│   │   ├── datasets/
-│   │   └── models/
-│   │       └── scmamba-yolo/
-│   └── nn/
-├── asserts/
-```
+SCMamba-YOLO is an object detection codebase for underwater submarine cable perception, built on Ultralytics and selective scan operators. The repository provides standard SCMamba-YOLO configs and enhancement-enabled variants that place an image enhancement front-end before the detector backbone.
 
 ## Environment Setup
-
-### 1. Clone the repository
 
 ```bash
 git clone <your-repo-url>
 cd SCMamba-YOLO
-```
 
-### 2. Create a conda environment
-
-```bash
 conda create -n scmambayolo python=3.11 -y
 conda activate scmambayolo
-```
 
-### 3. Install PyTorch
-
-Please install the PyTorch version that matches your CUDA environment. For example:
-
-```bash
 pip install torch torchvision torchaudio
-```
-
-### 4. Install dependencies
-
-```bash
 pip install seaborn thop timm einops
+
 cd selective_scan
 pip install .
 cd ..
+
 pip install -v -e .
 ```
 
-## Dataset Preparation
+## Dataset Format
 
-Training follows the standard Ultralytics dataset-yaml format. Prepare a dataset yaml file such as:
+Training follows the standard Ultralytics dataset-yaml format:
 
 ```yaml
 path: /path/to/your/dataset
@@ -71,7 +36,7 @@ names:
   0: cable
 ```
 
-A typical folder structure is:
+Typical folder structure:
 
 ```text
 dataset/
@@ -85,20 +50,26 @@ dataset/
     └── test/
 ```
 
-## Available Model Configurations
+## Model Configs
 
-Model yaml files are located in:
+All model yaml files are under:
 
 ```text
 ultralytics/cfg/models/scmamba-yolo/
 ```
 
-Examples:
+Available variants:
 
-- `ultralytics/cfg/models/scmamba-yolo/SCMamba-YOLO-T.yaml`
+- `SCMamba-YOLO-T.yaml`
+- `SCMamba-YOLO-B.yaml`
+- `SCMamba-YOLO-L.yaml`
+- `SCMamba-YOLO-T-Enhance.yaml`
+- `SCMamba-YOLO-B-Enhance.yaml`
+- `SCMamba-YOLO-L-Enhance.yaml`
+
 ## Quick Start
 
-### Train from a yaml configuration
+### Train the standard detector
 
 ```bash
 python train.py \
@@ -108,57 +79,25 @@ python train.py \
   --imgsz 640 \
   --epochs 400 \
   --batch_size 16 \
-  --device 0 \
-  --project runs/train \
-  --name scmambayolo_t
+  --device 0
 ```
 
-### Resume interrupted training
-
-`train.py` will resume automatically if the checkpoint path given by `--resume` exists.
+### Train with the enhancement front-end
 
 ```bash
 python train.py \
   --task train \
   --data /path/to/your_dataset.yaml \
-  --config ultralytics/cfg/models/scmamba-yolo/SCMamba-YOLO-T.yaml \
-  --resume runs/train/scmambayolo_t/weights/last.pt \
+  --config ultralytics/cfg/models/scmamba-yolo/SCMamba-YOLO-T-Enhance.yaml \
+  --enhance_weights /path/to/interactnet.pth \
+  --enhance_freeze \
+  --imgsz 640 \
+  --epochs 400 \
+  --batch_size 16 \
   --device 0
 ```
 
-## Common Arguments
-
-`train.py` supports the following frequently used options:
-
-- `--data`: dataset yaml path
-- `--config`: model yaml path
-- `--weights`: optional checkpoint for warm-start loading
-- `--task`: `train`, `val`, or `test`
-- `--imgsz`: input image size
-- `--epochs`: training epochs
-- `--batch_size`: batch size
-- `--device`: GPU id such as `0`, `0,1`, or `cpu`
-- `--workers`: dataloader workers
-- `--optimizer`: `SGD`, `Adam`, or `AdamW`
-- `--freeze`: freeze the first `n` model layers during training
-- `--amp`: enable automatic mixed precision
-- `--project`: save directory
-- `--name`: experiment name
-- `--resume`: checkpoint path for resume training
-
-
-### Validation with `val.py`
-
-`val.py` is a standalone evaluation script for exporting statistics, including:
-
-- GFLOPs
-- parameter count
-- preprocessing / inference / postprocessing time
-- FPS
-- class-wise Precision / Recall / F1 / mAP
-- overall metrics summary
-
-Run it with:
+### Validate a trained checkpoint
 
 ```bash
 python val.py \
@@ -167,23 +106,17 @@ python val.py \
   --split test \
   --imgsz 640 \
   --batch 4 \
-  --device 0 \
-  --project runs/val \
-  --name scmambayolo_val
-```
-
-The current script writes the final summary to:
-
-```text
-runs/val/<exp_name>/paper_data.txt
+  --device 0
 ```
 
 ## Notes
 
-- `--config` is used to define the model structure from a yaml file.
-- `--weights` is optional and is used to load an existing `.pt` checkpoint before training.
-- Freezing layers does not change the total parameter count of the model; it only reduces the number of trainable parameters during optimization.
-- For Mamba-based configs, make sure `selective_scan` is installed correctly before training or evaluation.
+- Use `SCMamba-YOLO-*-Enhance.yaml` only when you have a pretrained InteractNet enhancement checkpoint.
+- For the released `train.py`, enhancement-enabled configs require `--enhance_weights`. If it is missing, the script will stop and print instructions for obtaining enhancement weights through `Enhancement-main/src/train.py`.
+- The enhancement module can still be instantiated without weights for architecture inspection or local debugging, but random initialization is not intended for official results.
+- Freezing layers does not reduce the total parameter count; it only reduces the number of trainable parameters during optimization.
+- `val.py` writes a summary file to `runs/val/<exp_name>/paper_data.txt`.
+- For Mamba-based configs, install `selective_scan` correctly before training or evaluation.
 
 ## Acknowledgements
 

@@ -63,6 +63,7 @@ from .conv import (
     RepConv,
     SpatialAttention,
 )
+from .enhance_front import EnhanceFront, configure_enhance_runtime, enhance_runtime_enabled, enhance_runtime_frozen
 from .head import OBB, Classify, Detect, Pose, RTDETRDecoder, Segment, WorldDetect
 from .transformer import (
     AIFI,
@@ -139,5 +140,9 @@ __all__ = (
     "CBFuse",
     "CBLinear",
     "Silence",
-    "SimpleStem", "VisionClueMerge", "VSSBlock", "EGVSSBlock", "LiteEGVSSBlock", "GateVSSBlock", "XSSBlock"
+    "SimpleStem", "VisionClueMerge", "VSSBlock", "EGVSSBlock", "LiteEGVSSBlock", "GateVSSBlock", "XSSBlock",
+    "EnhanceFront",
+    "configure_enhance_runtime",
+    "enhance_runtime_enabled",
+    "enhance_runtime_frozen",
 )

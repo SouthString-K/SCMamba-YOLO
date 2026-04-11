@@ -1,6 +1,6 @@
 nc: 80  # number of classes
 scales:   # [depth, width, max_channels]
-  L: [0.67, 0.75, 768]  # Mamba-YOLOv8-T summary: 6.1M parameters, 14.3 GFLOPs
+  L: [0.67, 0.75, 768]  # Mamba-YOLOv8-L summary: parameters and GFLOPs depend on task-specific width/depth scaling
 
 
 # Mamba-YOLO backbone with edge-guided VSS blocks only

@@ -1,47 +1,70 @@
+from __future__ import annotations
+
 import argparse
 import os
-import warnings
+from pathlib import Path
 
 import numpy as np
 from prettytable import PrettyTable
+
 from ultralytics import YOLO
+from ultralytics.nn.modules.enhance_front import configure_enhance_runtime
 from ultralytics.utils.torch_utils import model_info
 
-warnings.filterwarnings("ignore")
+
+def resolve_path(path: str | None) -> str | None:
+    if path is None:
+        return None
+    if os.path.isabs(path):
+        return path
+    return os.path.abspath(path)
 
 
-def get_weight_size(path):
+def get_weight_size(path: str) -> str:
     stats = os.stat(path)
     return f"{stats.st_size / 1024 / 1024:.1f}"
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Validate a trained SCMamba-YOLO checkpoint and export paper-ready metrics.")
-    parser.add_argument("--weights", type=str, required=True, help="Path to trained checkpoint (.pt)")
-    parser.add_argument("--data", type=str, required=True, help="Dataset yaml path")
-    parser.add_argument("--split", type=str, default="test", choices=["train", "val", "test"], help="Dataset split")
-    parser.add_argument("--imgsz", type=int, default=640, help="Validation image size")
-    parser.add_argument("--batch", type=int, default=4, help="Batch size")
-    parser.add_argument("--project", type=str, default="runs/val", help="Save directory")
-    parser.add_argument("--name", type=str, default="exp", help="Experiment name")
-    parser.add_argument("--device", type=str, default="0", help="CUDA device id or cpu")
-    parser.add_argument("--save_json", action="store_true", help="Save COCO-style json if needed")
+def parse_opt():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--weights", type=str, required=True, help="detector checkpoint (.pt)")
+    parser.add_argument("--data", type=str, required=True, help="dataset yaml path")
+    parser.add_argument("--split", type=str, default="test", help="val or test")
+    parser.add_argument("--imgsz", type=int, default=640, help="input size")
+    parser.add_argument("--batch", type=int, default=4, help="batch size")
+    parser.add_argument("--device", default="0", help="cuda device or cpu")
+    parser.add_argument("--project", default="runs/val", help="save to project/name")
+    parser.add_argument("--name", default="scmambayolo_val", help="save to project/name")
+    parser.add_argument("--save_json", action="store_true", help="export json for COCO-style eval")
+    parser.add_argument("--enhance_weights", type=str, default=None, help="optional InteractNet checkpoint (.pth)")
+    parser.add_argument(
+        "--enhance_freeze",
+        action="store_true",
+        help="kept for symmetry with train.py; inference always uses eval mode",
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    args = parse_args()
+    opt = parse_opt()
+    weights_path = resolve_path(opt.weights)
 
-    model = YOLO(args.weights)
+    configure_enhance_runtime(
+        enable=True,
+        weights=resolve_path(opt.enhance_weights),
+        freeze=opt.enhance_freeze,
+    )
+
+    model = YOLO(weights_path)
     result = model.val(
-        data=args.data,
-        split=args.split,
-        imgsz=args.imgsz,
-        batch=args.batch,
-        project=args.project,
-        name=args.name,
-        device=args.device,
-        save_json=args.save_json,
+        data=resolve_path(opt.data),
+        split=opt.split,
+        imgsz=opt.imgsz,
+        batch=opt.batch,
+        project=resolve_path(opt.project),
+        name=opt.name,
+        device=opt.device,
+        save_json=opt.save_json,
     )
 
     if model.task == "detect":
@@ -51,9 +74,7 @@ if __name__ == "__main__":
         postprocess_time_per_image = result.speed["postprocess"]
         all_time_per_image = preprocess_time_per_image + inference_time_per_image + postprocess_time_per_image
 
-        n_l, n_p, n_g, flops = model_info(model.model)
-
-        print("-" * 20 + " Final paper-ready statistics " + "-" * 20)
+        _, n_p, _, flops = model_info(model.model)
 
         model_info_table = PrettyTable()
         model_info_table.title = "Model Info"
@@ -76,16 +97,16 @@ if __name__ == "__main__":
                 f"{postprocess_time_per_image / 1000:.6f}s",
                 f"{1000 / all_time_per_image:.2f}",
                 f"{1000 / inference_time_per_image:.2f}",
-                f"{get_weight_size(args.weights)}MB",
+                f"{get_weight_size(weights_path)}MB",
             ]
         )
         print(model_info_table)
 
-        model_metrice_table = PrettyTable()
-        model_metrice_table.title = "Model Metrics"
-        model_metrice_table.field_names = ["Class Name", "Precision", "Recall", "F1-Score", "mAP50", "mAP75", "mAP50-95"]
+        model_metric_table = PrettyTable()
+        model_metric_table.title = "Model Metrics"
+        model_metric_table.field_names = ["Class Name", "Precision", "Recall", "F1-Score", "mAP50", "mAP75", "mAP50-95"]
         for idx, cls_name in enumerate(model_names):
-            model_metrice_table.add_row(
+            model_metric_table.add_row(
                 [
                     cls_name,
                     f"{result.box.p[idx]:.4f}",
@@ -96,9 +117,10 @@ if __name__ == "__main__":
                     f"{result.box.ap[idx]:.4f}",
                 ]
             )
-        model_metrice_table.add_row(
+
+        model_metric_table.add_row(
             [
-                "all(avg)",
+                "all(mean)",
                 f"{result.results_dict['metrics/precision(B)']:.4f}",
                 f"{result.results_dict['metrics/recall(B)']:.4f}",
                 f"{np.mean(result.box.f1):.4f}",
@@ -107,11 +129,12 @@ if __name__ == "__main__":
                 f"{result.results_dict['metrics/mAP50-95(B)']:.4f}",
             ]
         )
-        print(model_metrice_table)
+        print(model_metric_table)
 
-        with open(result.save_dir / "paper_data.txt", "w+", encoding="utf-8") as f:
+        save_path = Path(result.save_dir) / "paper_data.txt"
+        with open(save_path, "w", encoding="utf-8") as f:
             f.write(str(model_info_table))
             f.write("\n")
-            f.write(str(model_metrice_table))
+            f.write(str(model_metric_table))
 
-        print("-" * 20, f"Results saved to {result.save_dir}/paper_data.txt", "-" * 20)
+        print(f"Saved summary to {save_path}")

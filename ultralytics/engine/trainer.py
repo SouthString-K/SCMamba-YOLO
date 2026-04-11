@@ -237,6 +237,13 @@ class BaseTrainer:
             else []
         )
         always_freeze_names = [".dfl"]  # always freeze these layers
+        first_module = self.model.model[0] if getattr(self.model, "model", None) else None
+        if (
+            os.getenv("SCMAMBA_ENHANCE_FREEZE", "0").lower() in {"1", "true", "yes", "on"}
+            and first_module is not None
+            and type(first_module).__name__ == "EnhanceFront"
+        ):
+            always_freeze_names.append("model.0.")
         freeze_layer_names = [f"model.{x}." for x in freeze_list] + always_freeze_names
         for k, v in self.model.named_parameters():
             # v.register_hook(lambda x: torch.nan_to_num(x))  # NaN to 0 (commented for erratic training results)
