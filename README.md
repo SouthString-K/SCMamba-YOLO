@@ -3,6 +3,8 @@
 
 SCMamba-YOLO is an object detection codebase for underwater submarine cable perception, built on Ultralytics and selective scan operators. The repository provides standard SCMamba-YOLO configs and enhancement-enabled variants that place an image enhancement front-end before the detector backbone.
 
+![SCMamba-YOLO Architecture](./Figure.png)
+
 ## Environment Setup
 
 ```bash
