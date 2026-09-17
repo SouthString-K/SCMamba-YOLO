@@ -1,14 +1,33 @@
+<div align="center">
+
 # SCMamba-YOLO
-[IcaMal2026]
 
-SCMamba-YOLO is an object detection codebase for underwater submarine cable perception, built on Ultralytics and selective scan operators. The repository provides standard SCMamba-YOLO configs and enhancement-enabled variants that place an image enhancement front-end before the detector backbone.
+**[IcaMal2026] Edge-Guided Mamba Object Detection for Underwater Submarine Cable Perception**
 
-![SCMamba-YOLO Architecture](./Figure.png)
+![Python 3.11](https://img.shields.io/badge/Python-3.11-green)
+![PyTorch 2.x](https://img.shields.io/badge/PyTorch-2.x-blue)
+![CUDA 11.8+](https://img.shields.io/badge/CUDA-11.8%2B-orange)
+
+</div>
+
+**SCMamba-YOLO** is an object detection framework for **underwater submarine cable perception**, built on [Ultralytics](https://github.com/ultralytics/ultralytics) and the [Mamba-YOLO](https://github.com/HZAI-ZJNU/Mamba-YOLO) state-space detector. It replaces the standard backbone with **edge-guided visual state-space (VSS) blocks** (`EGVSSBlock`), which couple Sobel-based boundary-aware enhancement, local topology aggregation, and range-scanning SS2D with gated feature refinement — a design tailored to thin, elongated cable structures in cluttered underwater scenes. For low-visibility imagery, enhancement-enabled variants place a pretrained [CDF-UIE](Enhancement-main/) image-enhancement front-end ahead of the detector.
+
+<div align="center">
+  <img src="./Figure.png" width="1000px"/>
+  <p><i>Overview of the edge-guided SS2D block (EGSSBlock) used in the SCMamba-YOLO backbone.</i></p>
+</div>
+
+## Highlights
+
+- **Edge-guided VSS backbone** — `EGVSSBlock` explicitly reinforces cable boundaries and long-range topology via boundary-aware enhancement and range-scanning state-space modeling.
+- **Optional enhancement front-end** — `*-Enhance` configs attach a pretrained CDF-UIE enhancer (`Enhancement-main/`) before the detector for degraded underwater imagery.
+- **Three model scales** — T / B / L variants, each with a standard and an enhancement-enabled config, under `ultralytics/cfg/models/scmamba-yolo/`.
+- **Ultralytics-native workflow** — standard dataset-yaml format with simple `train.py` / `val.py` entry points.
 
 ## Environment Setup
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/SouthString-K/SCMamba-YOLO.git
 cd SCMamba-YOLO
 
 conda create -n scmambayolo python=3.11 -y
@@ -125,4 +144,5 @@ python val.py \
 This project is built on top of:
 
 - [Ultralytics](https://github.com/ultralytics/ultralytics)
+- [Mamba-YOLO](https://github.com/HZAI-ZJNU/Mamba-YOLO)
 - selective scan operators from the VMamba ecosystem
